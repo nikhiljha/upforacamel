@@ -1,5 +1,5 @@
 cd client
-npm run-script build
+npm run build
 cd ..
 rm -rf server/static
-cp -R client/build server/static
+cp -R client/dist server/static

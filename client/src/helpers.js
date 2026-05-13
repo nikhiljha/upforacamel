@@ -1,13 +1,13 @@
 export function playerNumberToColor(n) {
   return [
-    "lightblue",
-    "lightcoral",
-    "lightgoldenrodyellow",
-    "lightgreen",
-    "lightsalmon",
-    "lightseagreen",
-    "plum",
-    "sandybrown",
+    "#6CB4EE",
+    "#F08080",
+    "#90D5A0",
+    "#FFD580",
+    "#C5A3FF",
+    "#87CEEB",
+    "#DDA0DD",
+    "#F4A460",
   ][n - 1];
 }
 
@@ -33,6 +33,7 @@ export function camelToNumber(camelColor) {
   }
 }
 
+// Returns the named color string used in server protocol
 export function camelToColor(camelNumber) {
   switch (camelNumber) {
     case 1:
@@ -55,27 +56,69 @@ export function camelToColor(camelNumber) {
   }
 }
 
+// Returns a richer hex color for display/rendering
+export function camelToDisplayColor(camelNumber) {
+  switch (camelNumber) {
+    case 1:
+      return "#D94F4F";
+    case 2:
+      return "#E8A832";
+    case 3:
+      return "#4A7FD4";
+    case 4:
+      return "#3DAA6D";
+    case 5:
+      return "#855FCC";
+    case -1:
+      return "#333333";
+    case -2:
+      return "#F5F5F5";
+    default:
+      console.error("unknown camel number");
+      return null;
+  }
+}
+
 export function camelToTextColor(camelNumber) {
   switch (camelNumber) {
     case 1:
-      return "black";
+      return "#FFFFFF";
     case 2:
-      return "black";
+      return "#2C1810";
     case 3:
-      return "white";
+      return "#FFFFFF";
     case 4:
-      return "black";
+      return "#FFFFFF";
     case 5:
-      return "white";
+      return "#FFFFFF";
     case -1:
-      return "white";
+      return "#FFFFFF";
     case -2:
-      return "black";
+      return "#2C1810";
     default:
-      console.log(camelNumber);
-
       console.error("unknown camel number");
       return null;
+  }
+}
+
+export function camelToName(camelNumber) {
+  switch (camelNumber) {
+    case 1:
+      return "Red";
+    case 2:
+      return "Yellow";
+    case 3:
+      return "Blue";
+    case 4:
+      return "Green";
+    case 5:
+      return "Purple";
+    case -1:
+      return "Black";
+    case -2:
+      return "White";
+    default:
+      return "?";
   }
 }
 
@@ -99,14 +142,6 @@ export function getCrowds(gameState) {
   if (!gameState) {
     return [];
   }
-  // return Object.values(gameState.track).map((v) =>
-  //   v.tiles.length
-  //     ? {
-  //         player: 1,
-  //         direction: tileToNumber(v.tiles[0]),
-  //       }
-  //     : null
-  // );
   const crowds = [];
   for (let i = 0; i < 16; i++) {
     crowds.push(null);
@@ -202,6 +237,25 @@ export function getRolls(gameState) {
   );
 }
 
+const COLORED_DICE = ["red", "yellow", "blue", "green", "purple"];
+
+export function getUnrolledDice(gameState) {
+  if (!gameState) return [];
+  const remaining = new Set(getCurrentLeg(gameState).remainingDice || []);
+  return COLORED_DICE.filter((c) => remaining.has(c)).map((c) => camelToNumber(c));
+}
+
+export function getDiceRemaining(gameState) {
+  if (!gameState) return 6;
+  return (getCurrentLeg(gameState).remainingDice || []).length;
+}
+
+export function getCurrentPlayerName(gameState) {
+  if (!gameState || !gameState.currentPlayer) return null;
+  const p = gameState.players[gameState.currentPlayer];
+  return p ? p.displayName : null;
+}
+
 export function getLegResults(gameState) {
   if (!gameState || !gameState.players) {
     return [];
@@ -209,7 +263,6 @@ export function getLegResults(gameState) {
 
   const results = [];
 
-  // Iterate through completed legs (all legs before current one)
   for (let legNum = 0; legNum < gameState.currentLegNum; legNum++) {
     const leg = gameState.legs[legNum];
     const winnerCamel = leg.winner;
@@ -217,19 +270,17 @@ export function getLegResults(gameState) {
 
     const legResults = {
       legNumber: legNum + 1,
-      winner: winnerCamel,
-      runnerUp: runnerUpCamel,
+      winner: camelToNumber(winnerCamel),
+      runnerUp: camelToNumber(runnerUpCamel),
       players: []
     };
 
-    // Get results for each player in this leg
     for (const playerId in gameState.players) {
       const player = gameState.players[playerId];
       const legData = player.legs[legNum];
 
       if (!legData) continue;
 
-      // Calculate detailed bet information
       const bets = [];
       let totalBetPoints = 0;
 

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Camel Stacking Tuner</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #F5F0E8;
+    color: #2C1810;
+    padding: 24px;
+  }
+  h1 { margin-bottom: 16px; font-size: 22px; }
+  .controls {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: center;
+  }
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .control-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #666;
+  }
+  .control-group .value {
+    font-size: 12px;
+    color: #999;
+    font-family: monospace;
+  }
+  input[type=range] { width: 200px; }
+  .output {
+    background: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    font-family: monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .preview-area {
+    display: flex;
+    gap: 40px;
+    align-items: flex-end;
+  }
+  .stack-container {
+    background: linear-gradient(180deg, #C8B898 0%, #B8A888 100%);
+    border: 1px solid #A09070;
+    border-radius: 8px;
+    width: 120px;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 8px;
+    position: relative;
+  }
+  .stack-label {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #666;
+  }
+  .camel-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .copy-btn {
+    background: #C4563A;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .copy-btn:hover { background: #B34A30; }
+</style>
+</head>
+<body>
+<h1>Camel Stacking Tuner</h1>
+
+<div class="controls">
+  <div class="control-group">
+    <label>Camel Size (px)</label>
+    <input type="range" id="size" min="20" max="120" value="60">
+    <span class="value" id="size-val">60</span>
+  </div>
+  <div class="control-group">
+    <label>Normal on Normal X</label>
+    <input type="range" id="nn_x" min="-80" max="80" value="-6">
+    <span class="value" id="nn_x-val">-6</span>
+  </div>
+  <div class="control-group">
+    <label>Normal on Crazy X</label>
+    <input type="range" id="nc_x" min="-80" max="80" value="-6">
+    <span class="value" id="nc_x-val">-6</span>
+  </div>
+  <div class="control-group">
+    <label>Crazy on Normal X</label>
+    <input type="range" id="cn_x" min="-80" max="80" value="-6">
+    <span class="value" id="cn_x-val">-6</span>
+  </div>
+  <div class="control-group">
+    <label>Crazy on Crazy X</label>
+    <input type="range" id="cc_x" min="-80" max="80" value="-6">
+    <span class="value" id="cc_x-val">-6</span>
+  </div>
+  <button class="copy-btn" onclick="copyCSS()">Copy CSS Values</button>
+</div>
+
+<div class="output" id="output"></div>
+
+<div class="preview-area">
+  <div>
+    <div class="stack-label">Normal on Normal</div>
+    <div class="stack-container" id="stackNN"></div>
+  </div>
+  <div>
+    <div class="stack-label">Normal on Crazy</div>
+    <div class="stack-container" id="stackNC"></div>
+  </div>
+  <div>
+    <div class="stack-label">Crazy on Normal</div>
+    <div class="stack-container" id="stackCN"></div>
+  </div>
+  <div>
+    <div class="stack-label">Crazy on Crazy</div>
+    <div class="stack-container" id="stackCC"></div>
+  </div>
+  <div>
+    <div class="stack-label">Big mixed stack</div>
+    <div class="stack-container" id="stackMixed"></div>
+  </div>
+  <div>
+    <div class="stack-label">5 normal</div>
+    <div class="stack-container" id="stack5"></div>
+  </div>
+</div>
+
+<script>
+const CAMEL_PATH = "m 887.62201,629.91946 c -17.86669,-6.2419 -35.33316,-22.2335 -90.30013,-82.6754 -40.31032,-44.32538 -55.28022,-59.35236 -68.83398,-69.09642 -26.07416,-18.74524 -47.08612,-24.8325 -68.86589,-19.95077 -5.225,1.17113 -14.225,3.9458 -20,6.16592 -11.84551,4.55386 -31.23564,15.7218 -38.00001,21.8865 -2.475,2.25559 -5.97417,5.26446 -7.77593,6.68638 -9.78176,7.71962 -28.96562,34.30119 -44.24607,61.30839 -21.76332,38.4652 -37.79398,55 -53.32308,55 -10.42598,0 -26.21936,-7.9326 -39.65492,-19.9177 -9.27122,-8.2703 -12.40346,-11.5461 -46.46862,-48.5991 -32.82479,-35.70385 -41.12577,-44.07979 -49.03137,-49.47415 -3.85,-2.62704 -11.40698,-8.83326 -16.79328,-13.79162 -9.06086,-8.34096 -18.93754,-14.7603 -25.70672,-16.70805 -11.31104,-3.25463 -34.20536,-12.87797 -43.35821,-18.22509 -27.4138,-16.01523 -50.15583,-41.0626 -67.46612,-74.30514 -9.2914,-17.84311 -15.9342,-35.41454 -24.2966,-64.26968 -3.7986,-13.10711 -8.4241,-26.80349 -10.3005,-30.5 -6.0949,-12.00717 -14.279,-17.71967 -28.0786,-19.59901 -28.762,-3.91705 -60.946107,-9.68635 -72.026207,-12.91137 -10.5641,-3.07482 -20.2517,-9.72857 -32.557,-22.36105 -25.6784,-26.36132 -32.4163002,-41.62074 -32.3830002,-73.33805 0.022,-21.31773 1.6767,-26.62045 11.8550002,-38 6.6436,-7.427703 22.6661,-18.514803 37.3474,-25.843373 16.011,-7.99235 20.9576,-9.71652 43.263807,-15.07985 19.9839,-4.80496 46.2716,-14.1545 59.0197,-20.99104 0.8358,-0.44823 9.1608,-5.00642 18.5,-10.12933 9.3392,-5.1229 21.2373,-11.33223 26.4403,-13.7985 8.37569,-3.97011 10.26705,-4.48767 16.50005,-4.51509 7.95394,-0.035 10.69583,1.082 19.79211,8.06291 10.96468,8.4148 20.90116,22.42053 36.74587,51.79427 10.35068,19.18865 21.58613,34.942413 32.15766,45.089813 12.1934,11.7042 14.67132,12.49822 23.39245,7.49588 5.14608,-2.95173 7.03967,-5.24719 14.48959,-17.56469 10.2188,-16.895493 24.83692,-32.651893 39.42719,-42.497303 13.74863,-9.27749 24.40016,-9.373081 33.5351,-9.45498 14.75585,-0.132293 23.95836,1.34544 33.94772,6.42145 9.60674,4.881584 25.47436,17.16443 44.8405,34.721123 28.49604,25.83356 37.0977,33.32111 44.72257,38.93001 6.68592,4.91821 7.18448,5.11012 11.48921,4.42272 14.03019,-2.24042 24.80814,-12.81018 47.00908,-46.101043 30.63665,-45.94041 39.13804,-57.42599 53.6356,-72.46298 8.04449,-8.3438 15.34003,-13.20561 30.73419,-20.4814903 14.58705,-6.89442 20.72079,-7.79589 41.12114,-6.04349997 14.95712,1.28482 28.08677,4.78375997 39.55579,10.54128997 21.61571,10.8512403 50.00811,36.6154703 80.42866,72.9837003 39.11618,46.763993 49.70047,58.835633 64.93962,74.065213 25.04351,25.02777 34.48867,30.61913 52.07593,30.82794 6.22869,0.0739 10.53962,-0.43119 14,-1.64048 2.75,-0.96103 5.225,-1.68853 5.5,-1.61666 0.275,0.0719 4.97968,-3.07933 10.45481,-7.00267 5.47518,-3.92334 10.49768,-7.13334 11.16108,-7.13334 2.9696,0 13.2927,16.76616 15.8156,25.68669 5.0523,17.86418 0.3628,35.73136 -13.2322,50.41522 -8.3203,8.98669 -14.78418,13.11059 -29.69929,18.94778 -7.96422,3.11689 -12.11239,5.26247 -12.33417,6.37967 -0.1838,0.92582 1.50171,9.64547 3.74556,19.37698 23.77632,103.11705 21.31753,205.73462 -6.71591,280.28357 -11.62813,30.9225 -22.904,45.1044 -43.85519,55.1575 -8.3488,4.006 -9.29785,4.2297 -18.81628,4.4348 -5.90318,0.1272 -11.46285,-0.2867 -13.52401,-1.0068 z";
+const COLORS = ["#D94F4F", "#E8A832", "#4A7FD4", "#3DAA6D", "#855FCC"];
+const BLACK = "#333333";
+const WHITE = "#E8E0D4";
+
+function makeCamelSVG(color, size, flipped) {
+  const h = size * (633 / 1017);
+  const flipStyle = flipped ? `transform:scaleX(-1);` : '';
+  return `<svg viewBox="0 0 1017 633" width="${size}" height="${h}" style="display:block;${flipStyle}">
+    <g transform="translate(-9.186,3.937)">
+      <path d="${CAMEL_PATH}" fill="${color}" />
+    </g>
+  </svg>`;
+}
+
+// N = normal (facing right), C = crazy (facing left / flipped)
+const STACKS = [
+  { id: 'stackNN', camels: [
+    { color: COLORS[0], flipped: false },
+    { color: COLORS[1], flipped: false },
+    { color: COLORS[2], flipped: false },
+  ]},
+  { id: 'stackNC', camels: [
+    { color: COLORS[0], flipped: false },
+    { color: COLORS[1], flipped: false },
+    { color: BLACK, flipped: true },
+  ]},
+  { id: 'stackCN', camels: [
+    { color: BLACK, flipped: true },
+    { color: COLORS[2], flipped: false },
+    { color: COLORS[3], flipped: false },
+  ]},
+  { id: 'stackCC', camels: [
+    { color: BLACK, flipped: true },
+    { color: WHITE, flipped: true },
+  ]},
+  { id: 'stackMixed', camels: [
+    { color: COLORS[0], flipped: false },
+    { color: BLACK, flipped: true },
+    { color: COLORS[1], flipped: false },
+    { color: WHITE, flipped: true },
+    { color: COLORS[2], flipped: false },
+  ]},
+  { id: 'stack5', camels: [
+    { color: COLORS[0], flipped: false },
+    { color: COLORS[1], flipped: false },
+    { color: COLORS[2], flipped: false },
+    { color: COLORS[3], flipped: false },
+    { color: COLORS[4], flipped: false },
+  ]},
+];
+
+const SLIDER_IDS = ['size', 'nn_x', 'nc_x', 'cn_x', 'cc_x'];
+const OVERLAP_Y = -10;
+
+// Transition key: top camel on bottom camel
+function transitionKey(topFlipped, bottomFlipped) {
+  const t = topFlipped ? 'c' : 'n';
+  const b = bottomFlipped ? 'c' : 'n';
+  return t + b; // "nn", "nc", "cn", "cc"
+}
+
+function val(id) { return parseInt(document.getElementById(id).value); }
+
+function renderStacks() {
+  for (const id of SLIDER_IDS) {
+    document.getElementById(id + '-val').textContent = document.getElementById(id).value;
+  }
+
+  const size = val('size');
+  const xOffsets = {
+    nn: val('nn_x'),
+    nc: val('nc_x'),
+    cn: val('cn_x'),
+    cc: val('cc_x'),
+  };
+
+  for (const { id, camels } of STACKS) {
+    const el = document.getElementById(id);
+    el.innerHTML = '';
+    let cumulativeX = 0;
+    for (let i = 0; i < camels.length; i++) {
+      const { color, flipped } = camels[i];
+      // X offset based on transition between this camel (top) and the one below (bottom)
+      if (i > 0) {
+        // camels[i-1] is above (top), camels[i] is below (bottom)
+        const key = transitionKey(camels[i - 1].flipped, flipped);
+        cumulativeX += xOffsets[key];
+      }
+      const wrapper = document.createElement('div');
+      wrapper.className = 'camel-wrapper';
+      wrapper.style.marginBottom = (i < camels.length - 1) ? OVERLAP_Y + 'px' : '0';
+      wrapper.style.marginLeft = cumulativeX + 'px';
+      wrapper.style.zIndex = camels.length - i;
+      wrapper.innerHTML = makeCamelSVG(color, size, flipped);
+      el.appendChild(wrapper);
+    }
+  }
+
+  document.getElementById('output').textContent =
+    `size=${size} nn_x=${xOffsets.nn} nc_x=${xOffsets.nc} cn_x=${xOffsets.cn} cc_x=${xOffsets.cc}`;
+}
+
+for (const id of SLIDER_IDS) {
+  document.getElementById(id).addEventListener('input', renderStacks);
+}
+
+function copyCSS() {
+  const text = document.getElementById('output').textContent;
+  navigator.clipboard.writeText(text).then(() => alert('Copied!'));
+}
+
+renderStacks();
+</script>
+</body>
+</html>

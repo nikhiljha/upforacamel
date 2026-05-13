@@ -1,5 +1,13 @@
 import _ from "lodash";
 import util from "util";
+import {
+  colorCamels,
+  bwCamels,
+  isColorCamel,
+  getCamelPositionAndStack,
+  pickBlackOrWhiteCamel,
+  moveCamel,
+} from "./camel-movement.js";
 
 export function makeNewPlayer(gameState) {
   if (gameState.status !== "init") {
@@ -258,93 +266,7 @@ function placeDesertTile(gameState, event) {
   ] = isOasis ? desertTileIndex : -1 * desertTileIndex;
 }
 
-var colorCamels = ["red", "blue", "purple", "yellow", "green"];
-var bwCamels = ["black", "white"];
 
-function isColorCamel(color) {
-  return colorCamels.includes(color);
-}
-
-function getCamelPositionAndStack(track, color) {
-  for (var i = 0; i < Object.keys(track).length; i++) {
-    if (track[i]["camels"].includes(color)) {
-      var camelIndex = track[i]["camels"].indexOf(color);
-      var camelsToMove = track[i]["camels"].slice(camelIndex);
-      return [i, camelsToMove];
-    }
-  }
-  return [-1, null];
-}
-
-function pickBlackOrWhiteCamel(track, rolledDiceColor) {
-  var [blackPosition, blackCamelsToMove] = getCamelPositionAndStack(
-    track,
-    "black"
-  );
-  console.log(
-    `black: position ${blackPosition} and camels to move ${blackCamelsToMove}`
-  );
-  var [whitePosition, whiteCamelsToMove] = getCamelPositionAndStack(
-    track,
-    "white"
-  );
-  console.log(
-    `white: position ${whitePosition} and camels to move ${whiteCamelsToMove}`
-  );
-
-  var camelColor = null;
-  if (blackCamelsToMove.length === 1) {
-    if (whiteCamelsToMove.length === 1) {
-      // if neither camel is carrying anyone, move whichever was rolled
-      camelColor = rolledDiceColor;
-    } else if (whiteCamelsToMove[1] === "black") {
-      // if white camel is carrying black camel, then use black
-      camelColor = "black";
-    } else {
-      // if white camel is not carrying black camel, then use white
-      camelColor = "white";
-    }
-  } else {
-    if (whiteCamelsToMove.length === 1) {
-      // if black camel is carrying white, move white; else black
-      if (blackCamelsToMove[1] === "white") {
-        camelColor = "white";
-      } else {
-        camelColor = "black";
-      }
-    } else {
-      // both camels are carrying other camels
-      if (blackCamelsToMove[1] === "white") {
-        camelColor = "white";
-      } else if (whiteCamelsToMove[1] === "black") {
-        camelColor = "black";
-      } else {
-        camelColor = rolledDiceColor;
-      }
-    }
-  }
-  return camelColor;
-}
-
-function moveCamel(track, color, position, newPosition, placeUnder) {
-  var camelIndex = track[position]["camels"].indexOf(color);
-  var camelsToMove = track[position]["camels"].slice(camelIndex);
-  track[position]["camels"] = track[position]["camels"].slice(0, camelIndex);
-
-  if (newPosition) {
-    if (!placeUnder) {
-      track[newPosition]["camels"] = track[newPosition]["camels"].concat(
-        camelsToMove
-      );
-    } else {
-      track[newPosition]["camels"] = camelsToMove.concat(
-        track[newPosition]["camels"]
-      );
-    }
-  }
-
-  return camelsToMove;
-}
 
 function rollDice(gameState, event) {
   var currentPlayer = event.player;

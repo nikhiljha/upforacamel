@@ -2,6 +2,7 @@ import { Server } from "http";
 import express from "express";
 import { Server as SocketServer } from "socket.io";
 import { v4 as uuidv4 } from "uuid";
+import { predicates, objects } from "./words.js";
 import {
   getInitialGameState,
   makeNewPlayer,
@@ -11,8 +12,30 @@ import {
   updateDisplayName,
   removePlayer,
 } from "./reducer.js";
+import { makeBotMove, getBotDifficulties } from "./bot.js";
+
+function randomWord(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function generateGameId() {
+  return `${randomWord(predicates)}-${randomWord(predicates)}-${randomWord(objects)}`;
+}
+
+const MAX_RETRIES = 10;
 
 const app = express();
+
+app.get("/api/create-game", (req, res) => {
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    const id = generateGameId();
+    if (!games[id]) {
+      return res.json({ gameId: id });
+    }
+  }
+  res.status(503).json({ error: "Could not generate a unique game ID. Try again." });
+});
+
 app.use(express.static("static"));
 
 const server = Server(app);
@@ -36,6 +59,7 @@ const registerGameObserver = (gameId, callback) => {
       state: getInitialGameState(),
       observers: [],
       cookies: [],
+      bots: {}, // player number → { difficulty }
     };
   }
   games[gameId].observers[id] = { callback };
@@ -63,6 +87,20 @@ const issuePlayerUpdate = (observerId) => {
   });
 };
 
+const issueBotListUpdate = (gameId) => {
+  const game = games[gameId];
+  const botList = {};
+  for (const [player, info] of Object.entries(game.bots)) {
+    botList[player] = { difficulty: info.difficulty };
+  }
+  for (const o of Object.values(game.observers)) {
+    o.callback({
+      type: "bot_list",
+      data: { bots: botList },
+    });
+  }
+};
+
 const registerCookie = (observerId, cookie) => {
   console.log("registering cookie");
   const gameId = gameObservers[observerId];
@@ -75,12 +113,41 @@ const registerCookie = (observerId, cookie) => {
   game.observers[observerId].cookie = cookie;
   issueUpdate(gameId);
   issuePlayerUpdate(observerId);
+  issueBotListUpdate(gameId);
+};
+
+const addBot = (gameId, difficulty) => {
+  const game = games[gameId];
+  if (game.state.status !== "init") return null;
+
+  const player = makeNewPlayer(game.state);
+  if (!player) return null;
+
+  const diffLabel = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
+  updateDisplayName(game.state, player, `Bot (${diffLabel})`);
+  game.bots[player] = { difficulty };
+
+  issueUpdate(gameId);
+  issueBotListUpdate(gameId);
+  return player;
+};
+
+const removeBot = (gameId, player) => {
+  const game = games[gameId];
+  if (game.state.status !== "init") return;
+  if (!game.bots[player]) return;
+
+  delete game.bots[player];
+  removePlayer(game.state, player);
+  issueUpdate(gameId);
+  issueBotListUpdate(gameId);
 };
 
 const start = (gameId) => {
   console.log(`starting game ${gameId}!`);
   startGame(games[gameId].state);
   issueUpdate(gameId);
+  scheduleBotTurn(gameId);
 };
 
 const processEvent = (observerId, event) => {
@@ -94,11 +161,42 @@ const processEvent = (observerId, event) => {
 
   reduceEvent(game.state, event);
   issueUpdate(gameId);
+  scheduleBotTurn(gameId);
+};
+
+const scheduleBotTurn = (gameId) => {
+  const game = games[gameId];
+  if (!game || game.state.status !== "inprogress") return;
+
+  const currentPlayer = game.state.currentPlayer;
+  const botInfo = game.bots[currentPlayer];
+  if (!botInfo) return;
+
+  // Delay to make bot turns feel natural (600-1200ms)
+  const delay = 600 + Math.random() * 600;
+  setTimeout(() => {
+    try {
+      if (game.state.status !== "inprogress") return;
+      if (game.state.currentPlayer !== currentPlayer) return;
+
+      const event = makeBotMove(game.state, currentPlayer, botInfo.difficulty);
+      if (event) {
+        console.log(`Bot ${currentPlayer} (${botInfo.difficulty}):`, event.type, event.data);
+        reduceEvent(game.state, event);
+        issueUpdate(gameId);
+        scheduleBotTurn(gameId);
+      }
+    } catch (e) {
+      console.log(`Bot error: ${e.message}`, e.stack);
+    }
+  }, delay);
 };
 
 const changeName = (observerId, player, displayName) => {
   const gameId = gameObservers[observerId];
   const game = games[gameId];
+  // Don't allow renaming bots
+  if (game.bots[player]) return;
   updateDisplayName(game.state, player, displayName);
   issueUpdate(gameId);
 };
@@ -106,8 +204,12 @@ const changeName = (observerId, player, displayName) => {
 const remove = (observerId, player) => {
   const gameId = gameObservers[observerId];
   const game = games[gameId];
-  removePlayer(game.state, player);
-  issueUpdate(gameId);
+  if (game.bots[player]) {
+    removeBot(gameId, player);
+  } else {
+    removePlayer(game.state, player);
+    issueUpdate(gameId);
+  }
 };
 
 io.on("connection", (socket) => {
@@ -130,6 +232,16 @@ io.on("connection", (socket) => {
 
     socket.on("remove_player", ({ player }) => {
       remove(observerId, player);
+    });
+
+    socket.on("add_bot", ({ difficulty }) => {
+      const gameId = gameObservers[observerId];
+      addBot(gameId, difficulty);
+    });
+
+    socket.on("remove_bot", ({ player }) => {
+      const gameId = gameObservers[observerId];
+      removeBot(gameId, player);
     });
 
     socket.on("event", (event) => {
